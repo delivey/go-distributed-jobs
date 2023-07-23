@@ -15,8 +15,6 @@ func main() {
 
 	// Start the server
 	err := app.Listen(":9999")
-	fmt.Println("Server running!")
-
 	if err != nil {
 		panic(err)
 	}
@@ -26,22 +24,29 @@ func main() {
 func handleWebSocket(c *websocket.Conn) {
 	fmt.Println("Client connected!")
 
-	// Read messages from the client
-	go func() {
-		for {
-			_, msg, err := c.ReadMessage()
-			if err != nil {
-				fmt.Println("Client disconnected.")
-				break
-			}
-			fmt.Printf("Received message: %s\n", msg)
-
-			// Echo the message back to the client
-			err = c.WriteMessage(websocket.TextMessage, msg)
-			if err != nil {
-				fmt.Println("Error writing message:", err)
-				break
-			}
+	// Handle WebSocket close event
+	defer func() {
+		fmt.Println("Client disconnected.")
+		err := c.Close()
+		if err != nil {
+			fmt.Println("Error closing connection:", err)
 		}
 	}()
+
+	// Read messages from the client
+	for {
+		_, msg, err := c.ReadMessage()
+		if err != nil {
+			fmt.Println("Error reading message:", err)
+			break
+		}
+		fmt.Printf("Received message: %s\n", msg)
+
+		// Echo the message back to the client
+		err = c.WriteMessage(websocket.TextMessage, msg)
+		if err != nil {
+			fmt.Println("Error writing message:", err)
+			break
+		}
+	}
 }
