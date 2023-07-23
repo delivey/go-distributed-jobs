@@ -9,6 +9,7 @@ import (
 )
 
 var connections []*websocket.Conn
+var lastConnectionSentIndex = 0
 
 func main() {
 	app := fiber.New()
@@ -31,8 +32,36 @@ func handleJobs() {
 	// Iterate over an array from one to infinity
 	fmt.Println("handling jobs")
 	for i := 1; ; i++ {
-		fmt.Println("Running job", i)
 		time.Sleep(time.Second)
+
+		fmt.Println("Running job", i)
+
+		// Check if connections is empty
+		if len(connections) == 0 {
+			fmt.Println("Could not send job", i, "to any clients")
+			continue
+		}
+
+		// Get xth element from connections
+		c := connections[lastConnectionSentIndex]
+
+		// Echo the message back to the client
+
+		msg := []byte(fmt.Sprintf("Job %v", i))
+
+		// Send message to client (c)
+		err := c.WriteMessage(websocket.TextMessage, msg)
+		if err != nil {
+			fmt.Println("Error writing message:", err)
+			break
+		}
+
+		// Increment lastConnectionSentIndex
+		lastConnectionSentIndex++
+		if lastConnectionSentIndex >= len(connections) {
+			lastConnectionSentIndex = 0
+		}
+
 	}
 }
 
@@ -60,17 +89,9 @@ func handleWebSocket(c *websocket.Conn) {
 
 	// Read messages from the client
 	for {
-		_, msg, err := c.ReadMessage()
+		_, _, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println("Error reading message:", err)
-			break
-		}
-		fmt.Printf("Received message: %s\n", msg)
-
-		// Echo the message back to the client
-		err = c.WriteMessage(websocket.TextMessage, msg)
-		if err != nil {
-			fmt.Println("Error writing message:", err)
 			break
 		}
 	}
